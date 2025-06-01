@@ -112,7 +112,7 @@ browser-use
 
 Testing Bot Detection:
 
-[![Bot Detection] (https://github.com/BARKEM-JC/browser-use-undetected/tree/main/static/BotDetection.gif)
+![Bot Detection](https://github.com/BARKEM-JC/browser-use-undetected/raw/main/static/BotDetection.gif)
 
 <br/><br/>
 

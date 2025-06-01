@@ -19,20 +19,18 @@ Test Sites:
 - https://kaliiiiiiiiii.github.io/brotector/
     - Wait 3 seconds after loading.
     - Click the button with ID `clickHere`.
-    - Click randomly within the button area.
-    - Take a screenshot before and after the click.
 
 - https://abrahamjuliot.github.io/creepjs
     - Wait 60 seconds after the page loads.
-    - Take a full-page screenshot.
+    - scroll to the bottom of the page.
 
 - https://fingerprint.com/products/bot-detection/
     - Wait 30 seconds after the page loads.
-    - Take a full-page screenshot.
+    - scroll to the bottom of the page.
 
 - https://www.browserscan.net/
     - Wait 30 seconds after loading.
-    - Take a full-page screenshot.
+    - scroll to the bottom of the page.
 
 (Optional – skip if proxy gets blocked):
 - https://bot.incolumitas.com/
@@ -42,12 +40,9 @@ Test Sites:
     - Wait until the table appears.
     - Click `updatePrice0` and `updatePrice1` and wait until they update.
     - Parse the table rows into a dictionary of name, price, and url.
-    - Parse and print `#new-tests` and `#detection-tests` JSON content.
-    - Take a final screenshot.
-
-Log screenshots to the debugging directory.
 """
 
+# You must seperate each task, running task_prompt directly will not work.
 async def main():
     agent = Agent(
         task=TASK_PROMPT,

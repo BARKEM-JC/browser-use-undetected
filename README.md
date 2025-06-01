@@ -18,7 +18,6 @@
 | [BrowserScan](https://www.browserscan.net/)                    | ✅ Pass | Report appears clean             |
 | [Incolumitus](https://bot.incolumitas.com/)                    | ❌ Fail | Proxy blocked                    |
 
-
 # Quick start
 
 Not available with pip yet, must git clone
@@ -108,6 +107,12 @@ browser-use
 ```
 
 # Demos
+
+<br/><br/>
+
+Testing Bot Detection:
+
+[![Bot Detection] (https://github.com/BARKEM-JC/browser-use-undetected/tree/main/static/BotDetection.gif)
 
 <br/><br/>
 

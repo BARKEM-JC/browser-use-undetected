@@ -154,7 +154,7 @@ https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
 
 ## More examples
 
-For more examples see the [examples](examples) folder or join the [Discord](https://link.browser-use.com/discord) and show off your project. You can also see our [`awesome-prompts`](https://github.com/browser-use/awesome-prompts) repo for prompting inspiration.
+For more examples see the [examples](examples) folder or join the official browser-use [Discord](https://link.browser-use.com/discord) and show off your project. You can also see [`awesome-prompts`](https://github.com/browser-use/awesome-prompts) repo for prompting inspiration.
 
 # Vision
 

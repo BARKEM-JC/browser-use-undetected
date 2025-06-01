@@ -104,7 +104,7 @@ For other settings, models, and more, check out the original [documentation 📕
 - [x] Proxy support
 - [ ] Fix disabled features (Remote connection, Advanced context & browser connection)
 - [ ] Anti-Captcha (Free local solving)
-- [ ] More proxy generation support
+- [ ] More proxy generation providers support
 - [ ] Anti-Captcha (Paid services)
 
 ### Test with UI

@@ -57,7 +57,12 @@ async def main():
         llm=ChatOpenAI(model="gpt-4.1-nano-2025-04-14"),
         enable_memory=False,
         proxy=utils.PROXY(), # Set as arguments or in .env, The following arguments only work with oxylabs currently: country_code='au', city='brisbane', session_time=10 
-    )
+		#proxy={
+		#	'server': f'http://host:port',
+		#	'username': proxy_username,
+		#	'password': self.password
+		#}
+	)
     await agent.run()
 
 if __name__ == "__main__":

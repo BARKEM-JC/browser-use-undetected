@@ -17,10 +17,16 @@ os.environ['PW_TEST_SCREENSHOT_NO_FONTS_READY'] = '1'  # https://github.com/micr
 
 import anyio
 import psutil
-from patchright.async_api import Playwright as PatchrightPlaywright
-from playwright.async_api import Browser as PlaywrightBrowser
-from playwright.async_api import BrowserContext as PlaywrightBrowserContext
-from playwright.async_api import ElementHandle, FrameLocator, Page, Playwright, async_playwright
+
+#TODO: Remove these imports if not needed. - UNDETECTED
+#from patchright.async_api import Playwright as PatchrightPlaywright
+#from playwright.async_api import Browser as PlaywrightBrowser
+#from playwright.async_api import BrowserContext as PlaywrightBrowserContext
+
+from camoufox.async_api import AsyncCamoufox as StealthPlaywright
+from camoufox.async_api import BrowserContext as StealthBrowserContext
+from camoufox.async_api import Browser as StealthBrowser
+from playwright.async_api import ElementHandle, FrameLocator, Page
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, InstanceOf, PrivateAttr, model_validator
 
 from browser_use.browser.profile import BrowserProfile
@@ -40,6 +46,13 @@ IN_DOCKER = os.environ.get('IN_DOCKER', 'false').lower()[0] in 'ty1'
 
 logger = logging.getLogger('browser_use.browser.session')
 
+#TODO: Check if camoufox is installed first, if not, try to install it automatically
+import subprocess
+try:
+	subprocess.run(["camoufox", "fetch"], check=True)
+except subprocess.CalledProcessError as e:
+	print(f"Please install camoufox by running 'camoufox fetch' in terminal, failed auto instal: {e.returncode}")
+	exit()
 
 _GLOB_WARNING_SHOWN = False  # used inside _is_url_allowed to avoid spamming the logs with the same warning multiple times
 
@@ -174,18 +187,19 @@ class BrowserSession(BaseModel):
 		description='pid of a running chromium-based browser process to connect to on localhost',
 		validation_alias=AliasChoices('chrome_pid'),  # old deprecated name = chrome_pid
 	)
-	playwright: Playwright | PatchrightPlaywright | Playwright | None = Field(
+
+	playwright: InstanceOf[StealthPlaywright] | None = Field(
 		default=None,
 		description='Playwright library object returned by: await (playwright or patchright).async_playwright().start()',
 		exclude=True,
 	)
-	browser: InstanceOf[PlaywrightBrowser] | None = Field(
+	browser: InstanceOf[StealthBrowser] | None = Field(
 		default=None,
 		description='playwright Browser object to use (optional)',
 		validation_alias=AliasChoices('playwright_browser'),
 		exclude=True,
 	)
-	browser_context: InstanceOf[PlaywrightBrowserContext] | None = Field(
+	browser_context: InstanceOf[StealthBrowserContext] | None = Field(
 		default=None,
 		description='playwright BrowserContext object to use (optional)',
 		validation_alias=AliasChoices('playwright_browser_context', 'context'),
@@ -244,7 +258,7 @@ class BrowserSession(BaseModel):
 	# 	"""
 	# 	return getattr(self.browser_profile, key)
 
-	async def start(self) -> Self:
+	async def start(self, stealth=True) -> Self:
 		"""
 		Starts the browser session by either connecting to an existing browser or launching a new one.
 		Precedence order for launching/connecting:
@@ -272,19 +286,22 @@ class BrowserSession(BaseModel):
 
 				# launch/connect to the browser:
 				# setup playwright library client, Browser, and BrowserContext objects
-				await self.setup_playwright()
-				await self.setup_browser_via_passed_objects()
-				await self.setup_browser_via_browser_pid()
-				await self.setup_browser_via_wss_url()
-				await self.setup_browser_via_cdp_url()
-				await (
-					self.setup_new_browser_context()
-				)  # creates a new context in existing browser or launches a new persistent context
-				assert self.browser_context, f'Failed to connect to or create a new BrowserContext for browser={self.browser}'
+				if not stealth:
+					await self.setup_playwright() #TODO: Remove if not needed. - UNDETECTED
+					await self.setup_browser_via_passed_objects()
+					await self.setup_browser_via_browser_pid()
+					await self.setup_browser_via_wss_url()
+					await self.setup_browser_via_cdp_url()
+					await (
+						self.setup_new_browser_context()
+					)  # creates a new context in existing browser or launches a new persistent context
+					assert self.browser_context, f'Failed to connect to or create a new BrowserContext for browser={self.browser}'
 
-				# resize the existing pages and set up foreground tab detection
-				await self._setup_viewports()
-				await self._setup_current_page_change_listeners()
+					# resize the existing pages and set up foreground tab detection
+					await self._setup_viewports()
+					await self._setup_current_page_change_listeners()
+				else:
+					self.browser = self.browser or await self.playwright.start()
 			except Exception:
 				self.initialized = False
 				raise
@@ -340,14 +357,18 @@ class BrowserSession(BaseModel):
 		Set up playwright library client object: usually the result of (await async_playwright().start())
 		Override to customize the set up of the playwright or patchright library object
 		"""
-		self.playwright = self.playwright or (await async_playwright().start())
+		# TODO: Remove if not needed. - UNDETECTED
+		self.playwright = StealthPlaywright()
+		self.playwright = self.playwright or (await StealthPlaywright().start())
+
+		#self.playwright = self.playwright or (await async_playwright().start())
 		# self.playwright = self.playwright or (await async_patchright().start())
 
 		# if isinstance(self.playwright, PatchrightPlaywright):
 		# 	# patchright handles all its own default args, dont mess with them
 		# 	self.browser_profile.ignore_default_args = True
 
-		# return self.playwright
+		return self.playwright
 
 	async def setup_browser_via_passed_objects(self) -> None:
 		"""Override to customize the set up of the connection to an existing browser"""
@@ -384,15 +405,16 @@ class BrowserSession(BaseModel):
 
 	async def setup_browser_via_browser_pid(self) -> None:
 		"""if browser_pid is provided, calcuclate its CDP URL by looking for --remote-debugging-port=... in its CLI args, then connect to it"""
+		return #TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
 
 		if self.browser or self.browser_context:
 			return  # already connected to a browser
 		if not self.browser_pid:
 			return  # no browser_pid provided, nothing to do
 
-		chrome_process = psutil.Process(pid=self.browser_pid)
-		assert chrome_process.is_running(), 'Chrome process is not running'
-		args = chrome_process.cmdline()
+		camoufox_process = psutil.Process(pid=self.browser_pid)
+		assert camoufox_process.is_running(), 'Chrome process is not running'
+		args = camoufox_process.cmdline()
 		debug_port = next((arg for arg in args if arg.startswith('--remote-debugging-port=')), '').split('=')[-1].strip()
 		assert debug_port, (
 			f'Could not find --remote-debugging-port=... to connect to in browser launch args: browser_pid={self.browser_pid} {args}'
@@ -408,6 +430,7 @@ class BrowserSession(BaseModel):
 
 	async def setup_browser_via_wss_url(self) -> None:
 		"""check for a passed wss_url, connect to a remote playwright browser server via WSS"""
+		return #TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
 
 		if self.browser or self.browser_context:
 			return  # already connected to a browser
@@ -423,7 +446,7 @@ class BrowserSession(BaseModel):
 
 	async def setup_browser_via_cdp_url(self) -> None:
 		"""check for a passed cdp_url, connect to a remote chromium-based browser via CDP"""
-
+		return #TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
 		if self.browser or self.browser_context:
 			return  # already connected to a browser
 		if not self.cdp_url:
@@ -465,13 +488,16 @@ class BrowserSession(BaseModel):
 				f'user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir) if self.browser_profile.user_data_dir else "<incognito>"}'
 			)
 			if not self.browser_profile.user_data_dir:
+				# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
 				# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
-				self.browser = self.browser or await self.playwright.chromium.launch(
-					**self.browser_profile.kwargs_for_launch().model_dump()
-				)
+				#self.browser = self.browser or await self.playwright.chromium.launch(
+				#	**self.browser_profile.kwargs_for_launch().model_dump()
+				#)
+				# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
 				self.browser_context = await self.browser.new_context(
 					**self.browser_profile.kwargs_for_new_context().model_dump()
 				)
+
 			else:
 				# user data dir was provided, prepare it for use
 				self.browser_profile.prepare_user_data_dir()
@@ -486,10 +512,15 @@ class BrowserSession(BaseModel):
 						# self._fork_locked_user_data_dir()
 						break
 
-				# if a user_data_dir is provided, launch a persistent context with that user_data_dir
-				self.browser_context = await self.playwright.chromium.launch_persistent_context(
+				# TODO: Check if this works, work around for below code - UNDETECTED
+				self.browser_context = await self.browser.new_context(
 					**self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
 				)
+				# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
+				# if a user_data_dir is provided, launch a persistent context with that user_data_dir
+				#self.browser_context = await self.playwright.chromium.launch_persistent_context(
+				#	**self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
+				#)
 
 		# Only restore browser from context if it's connected, otherwise keep it None to force new launch
 		browser_from_context = self.browser_context and self.browser_context.browser
@@ -503,15 +534,15 @@ class BrowserSession(BaseModel):
 			child_pids_after_launch = {child.pid for child in current_process.children(recursive=True)}
 			new_child_pids = child_pids_after_launch - child_pids_before_launch
 			new_child_procs = [psutil.Process(pid) for pid in new_child_pids]
-			new_chrome_procs = [proc for proc in new_child_procs if 'Helper' not in proc.name() and proc.status() == 'running']
+			new_camoufox_procs = [proc for proc in new_child_procs if 'Helper' not in proc.name() and proc.status() == 'running']
 		except Exception as e:
 			logger.debug(f'❌ Error trying to find child chrome processes after launching new browser: {type(e).__name__}: {e}')
-			new_chrome_procs = []
+			new_camoufox_procs = []
 
-		if new_chrome_procs and not self.browser_pid:
-			self.browser_pid = new_chrome_procs[0].pid
+		if new_camoufox_procs and not self.browser_pid:
+			self.browser_pid = new_camoufox_procs[0].pid
 			logger.debug(
-				f' ↳ Spawned browser subprocess: browser_pid={self.browser_pid} {" ".join(new_chrome_procs[0].cmdline())}'
+				f' ↳ Spawned browser subprocess: browser_pid={self.browser_pid} {" ".join(new_camoufox_procs[0].cmdline())}'
 			)
 			self._set_browser_keep_alive(False)  # close the browser at the end because we launched it
 
@@ -644,7 +675,7 @@ class BrowserSession(BaseModel):
 
 		def _BrowserUseonTabVisibilityChange(source: dict[str, str]):
 			"""hook callback fired when init script injected into a page detects a focus event"""
-			new_page = source['page']
+			new_page: Page | str | None = source['page']
 
 			# Update human foreground tab state
 			old_foreground = self.human_current_page
@@ -757,9 +788,9 @@ class BrowserSession(BaseModel):
 				)
 		try:
 			if self.browser_profile.default_timeout:
-				await self.browser_context.set_default_timeout(self.browser_profile.default_timeout)
+				self.browser_context.set_default_timeout(self.browser_profile.default_timeout)
 			if self.browser_profile.default_navigation_timeout:
-				await self.browser_context.set_default_navigation_timeout(self.browser_profile.default_navigation_timeout)
+				self.browser_context.set_default_navigation_timeout(self.browser_profile.default_navigation_timeout)
 		except Exception as e:
 			logger.warning(
 				f'⚠️ Failed to set playwright timeout settings '
@@ -823,7 +854,7 @@ class BrowserSession(BaseModel):
 						**self.browser_profile.window_size,
 					)
 					return
-				except Exception as e:
+				except:
 					pass
 
 				logger.warning(
@@ -950,22 +981,22 @@ class BrowserSession(BaseModel):
 		try:
 			await page.evaluate(
 				"""
-                try {
-                    // Remove the highlight container and all its contents
-                    const container = document.getElementById('playwright-highlight-container');
-                    if (container) {
-                        container.remove();
-                    }
+				try {
+					// Remove the highlight container and all its contents
+					const container = document.getElementById('playwright-highlight-container');
+					if (container) {
+						container.remove();
+					}
 
-                    // Remove highlight attributes from elements
-                    const highlightedElements = document.querySelectorAll('[browser-user-highlight-id^="playwright-highlight-"]');
-                    highlightedElements.forEach(el => {
-                        el.removeAttribute('browser-user-highlight-id');
-                    });
-                } catch (e) {
-                    console.error('Failed to remove highlights:', e);
-                }
-                """
+					// Remove highlight attributes from elements
+					const highlightedElements = document.querySelectorAll('[browser-user-highlight-id^="playwright-highlight-"]');
+					highlightedElements.forEach(el => {
+						el.removeAttribute('browser-user-highlight-id');
+					});
+				} catch (e) {
+					console.error('Failed to remove highlights:', e);
+				}
+				"""
 			)
 		except Exception as e:
 			logger.debug(f'⚠  Failed to remove highlights (this is usually ok): {type(e).__name__}: {e}')
@@ -1122,6 +1153,7 @@ class BrowserSession(BaseModel):
 
 		# save cookies_file if passed a cookies file path or if profile cookies_file is configured
 		path_is_storage_state = path and str(path).endswith('storage_state.json')
+		cookies_file_path = None
 		if (path and not path_is_storage_state) or self.browser_profile.cookies_file:
 			try:
 				cookies_file_path = Path(path or self.browser_profile.cookies_file).expanduser().resolve()

@@ -355,6 +355,7 @@ class BrowserSession(BaseModel):
 			geoip=True,
 			proxy=self.proxy,
 			humanize=True,
+			headless=self.browser_profile.headless,
 		)
 		#self.playwright = self.playwright or (await StealthPlaywright().start())
 
@@ -366,6 +367,16 @@ class BrowserSession(BaseModel):
 		# 	self.browser_profile.ignore_default_args = True
 
 		return self.playwright
+
+	async def _get_playwright_async(self):
+		"""Get the underlying Playwright async API object for connection methods"""
+		if not hasattr(self.playwright, 'browser') or not self.playwright.browser:
+			await self.playwright.start()
+		
+		# Access the underlying Playwright async API
+		from playwright.async_api._generated import Playwright
+		playwright_impl = self.playwright.browser._impl_obj._browser_type._playwright
+		return Playwright(playwright_impl)
 
 	async def setup_browser_via_passed_objects(self) -> None:
 		"""Override to customize the set up of the connection to an existing browser"""
@@ -402,116 +413,47 @@ class BrowserSession(BaseModel):
 
 	async def setup_browser_via_browser_pid(self) -> None:
 		"""if browser_pid is provided, calcuclate its CDP URL by looking for --remote-debugging-port=... in its CLI args, then connect to it"""
-		return #TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-
-		if self.browser or self.browser_context:
-			return  # already connected to a browser
-		if not self.browser_pid:
-			return  # no browser_pid provided, nothing to do
-
-		camoufox_process = psutil.Process(pid=self.browser_pid)
-		assert camoufox_process.is_running(), 'Chrome process is not running'
-		args = camoufox_process.cmdline()
-		debug_port = next((arg for arg in args if arg.startswith('--remote-debugging-port=')), '').split('=')[-1].strip()
-		assert debug_port, (
-			f'Could not find --remote-debugging-port=... to connect to in browser launch args: browser_pid={self.browser_pid} {args}'
+		# NOTE: This function is not supported with Camoufox/Firefox because:
+		# 1. Firefox doesn't support CDP (Chrome DevTools Protocol) connections
+		# 2. Firefox uses its own remote debugging protocol which is not compatible with Playwright's connect_over_cdp
+		# 3. The only remote connection method for Firefox is via WebSocket to a Playwright server
+		logger.warning(
+			"🚨 setup_browser_via_browser_pid is not supported with Camoufox/Firefox. "
+			"Firefox doesn't support CDP connections. Use setup_browser_via_wss_url for remote connections."
 		)
-		# we could automatically relaunch the browser process with that arg added here, but they may have tabs open they dont want to lose
-		self.cdp_url = self.cdp_url or f'http://localhost:{debug_port}/'
-		logger.info(f'🌎 Connecting to existing local browser process: browser_pid={self.browser_pid} on {self.cdp_url}')
-		self.browser = self.browser or await self.playwright.chromium.connect_over_cdp(
-			self.cdp_url,
-			**self.browser_profile.kwargs_for_connect().model_dump(),
-		)
-		self._set_browser_keep_alive(True)  # we connected to an existing browser, dont kill it at the end
+		return
 
 	async def setup_browser_via_wss_url(self) -> None:
 		"""check for a passed wss_url, connect to a remote playwright browser server via WSS"""
-		return #TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-
 		if self.browser or self.browser_context:
 			return  # already connected to a browser
 		if not self.wss_url:
 			return  # no wss_url provided, nothing to do
 
-		logger.info(f'🌎 Connecting to existing remote chromium playwright node.js server over WSS: {self.wss_url}')
-		self.browser = self.browser or await self.playwright.chromium.connect(
+		logger.info(f'🌎 Connecting to existing remote Firefox playwright node.js server over WSS: {self.wss_url}')
+		
+		playwright_async = await self._get_playwright_async()
+		self.browser = self.browser or await playwright_async.firefox.connect(
 			self.wss_url,
 			**self.browser_profile.kwargs_for_connect().model_dump(),
 		)
 		self._set_browser_keep_alive(True)  # we connected to an existing browser, dont kill it at the end
 
 	async def setup_browser_via_cdp_url(self) -> None:
-		"""check for a passed cdp_url, connect to a remote chromium-based browser via CDP"""
-		return #TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-		if self.browser or self.browser_context:
-			return  # already connected to a browser
-		if not self.cdp_url:
-			return  # no cdp_url provided, nothing to do
-
-		logger.info(f'🌎 Connecting to existing remote chromium-based browser over CDP: {self.cdp_url}')
-		self.browser = self.browser or await self.playwright.chromium.connect_over_cdp(
-			self.cdp_url,
-			**self.browser_profile.kwargs_for_connect().model_dump(),
+		"""check for a passed cdp_url, connect to a remote Firefox-based browser via CDP"""
+		# NOTE: This function is not supported with Camoufox/Firefox because:
+		# 1. Firefox doesn't support CDP (Chrome DevTools Protocol) connections
+		# 2. CDP is a Chromium-specific protocol
+		# 3. The only remote connection method for Firefox is via WebSocket to a Playwright server
+		logger.warning(
+			"🚨 setup_browser_via_cdp_url is not supported with Camoufox/Firefox. "
+			"Firefox doesn't support CDP connections. Use setup_browser_via_wss_url for remote connections."
 		)
-		self._set_browser_keep_alive(True)  # we connected to an existing browser, dont kill it at the end
+		return
 
 	async def setup_new_browser_context(self) -> None:
 		"""Launch a new browser and browser_context"""
-		if not self.browser:
-			await self.playwright.start()
-			self.browser = self.playwright.browser
-			self.browser_context = await self.browser.new_context()
-		return
-
-		async def _update_browser_context():
-			if not self.browser_context:
-				logger.info(
-					f'🌎 Launching local browser '
-					f'driver={str(type(self.playwright).__module__).split(".")[0]} channel={self.browser_profile.channel.name.lower()} '
-					f'user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir) if self.browser_profile.user_data_dir else "<incognito>"}'
-				)
-				if not self.browser_profile.user_data_dir:
-					# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-					# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
-					# self.browser = self.browser or await self.playwright.chromium.launch(
-					#	**self.browser_profile.kwargs_for_launch().model_dump()
-					# )
-					# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
-					self.browser_context = await self.browser.new_context(
-						**self.browser_profile.kwargs_for_new_context().model_dump()
-					)
-					self.browser = self.browser_context.browser
-				else:
-					# user data dir was provided, prepare it for use
-					self.browser_profile.prepare_user_data_dir()
-
-					# search for potentially conflicting local processes running on the same user_data_dir
-					for proc in psutil.process_iter(['pid', 'cmdline']):
-						if f'--user-data-dir={self.browser_profile.user_data_dir}' in (proc.info['cmdline'] or []):
-							logger.warning(
-								f'🚨 Found potentially conflicting browser process browser_pid={proc.info["pid"]} '
-								f'already running with the same user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir)}'
-							)
-							# self._fork_locked_user_data_dir()
-							break
-
-					# TODO: Check if this works, work around for below code - UNDETECTED
-					try:
-						context = self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
-						del context['env']
-						self.browser_context = await self.browser.new_context(
-							**context
-						)
-					except Exception as e:
-						print("BROWSER CONTEXT ERROR: " + str(e))
-						exit()
-			# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-			# if a user_data_dir is provided, launch a persistent context with that user_data_dir
-			# self.browser_context = await self.playwright.chromium.launch_persistent_context(
-			#	**self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
-			# )
-
+		# For Camoufox, we need to handle browser and context creation differently
 		current_process = psutil.Process(os.getpid())
 		child_pids_before_launch = {child.pid for child in current_process.children(recursive=True)}
 
@@ -531,28 +473,45 @@ class BrowserSession(BaseModel):
 				)
 				logger.info(f'🌎 Created new empty browser_context in existing browser{storage_info}: {self.browser_context}')
 
+		# If we still don't have a browser, create one using Camoufox
 		if not self.browser:
+			logger.info(
+				f'🌎 Launching local browser '
+				f'driver=camoufox channel={self.browser_profile.channel.name.lower()} '
+				f'user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir) if self.browser_profile.user_data_dir else "<incognito>"}'
+			)
+			
 			await self.playwright.start()
 			self.browser = self.playwright.browser
+			
+			# Create browser context with appropriate settings
+			if not self.browser_context:
+				context_kwargs = self.browser_profile.kwargs_for_new_context().model_dump()
+				
+				# Filter out Firefox-unsupported permissions for Camoufox
+				if 'permissions' in context_kwargs:
+					firefox_supported_permissions = ['notifications', 'geolocation', 'camera', 'microphone']
+					context_kwargs['permissions'] = [
+						perm for perm in context_kwargs['permissions'] 
+						if perm in firefox_supported_permissions
+					]
+				
+				self.browser_context = await self.browser.new_context(**context_kwargs)
+				storage_info = (
+					f' + loaded storage_state={len(self.browser_profile.storage_state.cookies) if self.browser_profile.storage_state else 0} cookies'
+					if self.browser_profile.storage_state
+					else ''
+				)
+				logger.info(f'🌎 Created new browser_context{storage_info}: {self.browser_context}')
 
-		# if we still have no browser_context by now, launch a new local one using launch_persistent_context()
-		await _update_browser_context()
-
-		# Only restore browser from context if it's connected, otherwise keep it None to force new launch
-		browser_from_context = self.browser_context and self.browser_context.browser
-		if browser_from_context and browser_from_context.is_connected():
-			self.browser = browser_from_context
-		# ^ self.browser can unfortunately still be None at the end ^
-		# playwright does not give us a browser object at all when we use launch_persistent_context()!
-
-		# Detect any new child chrome processes that we might have launched above
+		# Detect any new child camoufox processes that we might have launched above
 		try:
 			child_pids_after_launch = {child.pid for child in current_process.children(recursive=True)}
 			new_child_pids = child_pids_after_launch - child_pids_before_launch
 			new_child_procs = [psutil.Process(pid) for pid in new_child_pids]
 			new_camoufox_procs = [proc for proc in new_child_procs if 'Helper' not in proc.name() and proc.status() == 'running']
 		except Exception as e:
-			logger.debug(f'❌ Error trying to find child chrome processes after launching new browser: {type(e).__name__}: {e}')
+			logger.debug(f'❌ Error trying to find child camoufox processes after launching new browser: {type(e).__name__}: {e}')
 			new_camoufox_procs = []
 
 		if new_camoufox_procs and not self.browser_pid:
@@ -568,13 +527,14 @@ class BrowserSession(BaseModel):
 				f'Browser is not connected, did the browser process crash or get killed? (connection method: {connection_method})'
 			)
 			logger.debug(
-				f'🌎 {connection_method} browser connected: v{self.browser.version} {self.cdp_url or self.wss_url or self.browser_profile.executable_path or "(playwright)"}'
+				f'🌎 {connection_method} browser connected: v{self.browser.version} {self.cdp_url or self.wss_url or self.browser_profile.executable_path or "(camoufox)"}'
 			)
 
 		assert self.browser_context, (
 			f'Failed to create a playwright BrowserContext {self.browser_context} for browser={self.browser}'
 		)
 
+		# Add anti-detection scripts and setup
 		init_script = """
 					// check to make sure we're not inside the PDF viewer
 					window.isPdfViewer = !!document?.body?.querySelector('body > embed[type="application/pdf"][width="100%"]')
@@ -595,7 +555,7 @@ class BrowserSession(BaseModel):
 							const eventListenersMap = new WeakMap();
 
 							EventTarget.prototype.addEventListener = function(type, listener, options) {
-								if (typeof listener === "function") {
+								if (listener && typeof listener === 'function') {
 									let listeners = eventListenersMap.get(this);
 									if (!listeners) {
 										listeners = [];
@@ -630,31 +590,6 @@ class BrowserSession(BaseModel):
 
 		# Load cookies from file if specified
 		await self.load_cookies_from_file()
-
-	# async def _fork_locked_user_data_dir(self) -> None:
-	# 	"""Fork an in-use user_data_dir by cloning it to a new location to allow a second browser to use it"""
-	# 	# TODO: implement copy-on-write using overlayfs or zfs or something
-	# 	suffix_num = str(self.browser_profile.user_data_dir).rsplit('.', 1)[-1] or '1'
-	# 	suffix_num = int(suffix_num) if suffix_num.isdigit() else 1
-	# 	dir_name = self.browser_profile.user_data_dir.name
-	# 	incremented_name = dir_name.replace(f'.{suffix_num}', f'.{suffix_num + 1}')
-	# 	fork_path = self.browser_profile.user_data_dir.parent / incremented_name
-
-	# 	# keep incrementing the suffix_num until we find a path that doesn't exist
-	# 	while fork_path.exists():
-	# 		suffix_num += 1
-	# 		fork_path = self.browser_profile.user_data_dir.parent / (dir_name.rsplit('.', 1)[0] + f'.{suffix_num}')
-
-	# 	# use shutil to recursively copy the user_data_dir to a new location
-	# 	shutil.copytree(
-	# 		str(self.browser_profile.user_data_dir),
-	# 		str(fork_path),
-	# 		symlinks=True,
-	# 		ignore_dangling_symlinks=True,
-	# 		dirs_exist_ok=False,
-	# 	)
-	# 	self.browser_profile.user_data_dir = fork_path
-	# 	self.browser_profile.prepare_user_data_dir()
 
 	async def _setup_current_page_change_listeners(self) -> None:
 		# Uses a combination of:

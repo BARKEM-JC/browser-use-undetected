@@ -4,28 +4,27 @@
   <img alt="Shows a black Browser Use Logo in light color mode and a white one in dark color mode." src="./static/browser-use.png"  width="full">
 </picture>
 
-<h1 align="center">Enable AI to control your browser 🤖</h1>
-
-[![GitHub stars](https://img.shields.io/github/stars/gregpr07/browser-use?style=social)](https://github.com/gregpr07/browser-use/stargazers)
-[![Discord](https://img.shields.io/discord/1303749220842340412?color=7289DA&label=Discord&logo=discord&logoColor=white)](https://link.browser-use.com/discord)
-[![Cloud](https://img.shields.io/badge/Cloud-☁️-blue)](https://cloud.browser-use.com)
-[![Documentation](https://img.shields.io/badge/Documentation-📕-blue)](https://docs.browser-use.com)
-[![Twitter Follow](https://img.shields.io/twitter/follow/Gregor?style=social)](https://x.com/gregpr07)
-[![Twitter Follow](https://img.shields.io/twitter/follow/Magnus?style=social)](https://x.com/mamagnus00)
-[![Weave Badge](https://img.shields.io/endpoint?url=https%3A%2F%2Fapp.workweave.ai%2Fapi%2Frepository%2Fbadge%2Forg_T5Pvn3UBswTHIsN1dWS3voPg%2F881458615&labelColor=#EC6341)](https://app.workweave.ai/reports/repository/org_T5Pvn3UBswTHIsN1dWS3voPg/881458615)
+<h1 align="center">Enable AI to control your browser 🤖 (Now undetected with proxy support)</h1>
 
 🌐 Browser-use is the easiest way to connect your AI agents with the browser.
 
-💡 See what others are building and share your projects in our [Discord](https://link.browser-use.com/discord)! Want Swag? Check out our [Merch store](https://browsermerch.com).
+🕵️‍♂️ Detection Results
+| Site                                                           | Status | Notes                            |
+| -------------------------------------------------------------- | ------ | -------------------------------- |
+| [Google](https://www.google.com)                               | ✅ Pass | No bot detection triggered       |
+| [Brotector](https://kaliiiiiiiiii.github.io/brotector/)        | ✅ Pass | Click interaction successful     |
+| [CreepJS](https://abrahamjuliot.github.io/creepjs)             | ✅ Pass | No fingerprinting flags detected |
+| [Fingerprint](https://fingerprint.com/products/bot-detection/) | ✅ Pass | No bot behavior detected         |
+| [BrowserScan](https://www.browserscan.net/)                    | ✅ Pass | Report appears clean             |
+| [Incolumitus](https://bot.incolumitas.com/)                    | ❌ Fail | Proxy blocked                    |
 
-🌤️ Skip the setup - try our <b>hosted version</b> for instant browser automation! <b>[Try the cloud ☁︎](https://cloud.browser-use.com)</b>.
 
 # Quick start
 
-With pip (Python>=3.11):
-
+Not available with pip yet, must git clone
 ```bash
-pip install browser-use
+cd project
+git clone https://github.com/BARKEM-JC/browser-use-undetected.git
 ```
 
 For memory functionality (requires Python<3.13 due to PyTorch compatibility):  
@@ -34,28 +33,34 @@ For memory functionality (requires Python<3.13 due to PyTorch compatibility):
 pip install "browser-use[memory]"
 ```
 
-Install the browser:
-```bash
-playwright install chromium --with-deps --no-shell
-```
-
 Spin up your agent:
 
 ```python
 import asyncio
+import sys
+
 from dotenv import load_dotenv
 load_dotenv()
-from browser_use import Agent
+from browser_use import Agent, utils
 from langchain_openai import ChatOpenAI
 
 async def main():
     agent = Agent(
-        task="Compare the price of gpt-4o and DeepSeek-V3",
-        llm=ChatOpenAI(model="gpt-4o"),
+        task="Compare prices of the latest iPhone and Samsung Galaxy in Australia",
+        llm=ChatOpenAI(model="gpt-4.1-nano-2025-04-14"),
+        enable_memory=False,
+        proxy=utils.PROXY(), # Set as arguments or in .env, The following arguments only work with oxylabs currently: country_code='au', city='brisbane', session_time=10 
     )
     await agent.run()
 
-asyncio.run(main())
+if __name__ == "__main__":
+	# Fixes issues with running from different contexts on windows
+    if sys.platform.startswith("win"):
+        loop = asyncio.ProactorEventLoop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main())
+    else:
+        asyncio.run(main())
 ```
 
 Add your API keys for the provider you want to use to your `.env` file.
@@ -71,11 +76,16 @@ GROK_API_KEY=
 NOVITA_API_KEY=
 ```
 
-For other settings, models, and more, check out the [documentation 📕](https://docs.browser-use.com).
+You can add your proxy settings globally to your `.env` file (or just specify in the Agent call).
+```bash
+PROXY_USERNAME=
+PROXY_PASSWORD=
+PROXY_HOST=
+PROXY_PORT=
+```
 
-### Test with UI
+For other settings, models, and more, check out the original [documentation 📕](https://docs.browser-use.com).
 
-You can test browser-use using its [Web UI](https://github.com/browser-use/web-ui) or [Desktop App](https://github.com/browser-use/desktop).
 
 ### Test with an interactive CLI
 
@@ -128,35 +138,6 @@ For more examples see the [examples](examples) folder or join the [Discord](http
 
 Tell your computer what to do, and it gets it done.
 
-## Roadmap
-
-### Agent
-
-- [ ] Improve agent memory to handle +100 steps
-- [ ] Enhance planning capabilities (load website specific context)
-- [ ] Reduce token consumption (system prompt, DOM state)
-
-### DOM Extraction
-
-- [ ] Enable detection for all possible UI elements
-- [ ] Improve state representation for UI elements so that all LLMs can understand what's on the page
-
-### Workflows
-
-- [ ] Let user record a workflow - which we can rerun with browser-use as a fallback
-- [ ] Make rerunning of workflows work, even if pages change
-
-### User Experience
-
-- [ ] Create various templates for tutorial execution, job application, QA testing, social media, etc. which users can just copy & paste.
-- [ ] Improve docs
-- [ ] Make it faster
-
-### Parallelization
-
-- [ ] Human work is sequential. The real power of a browser agent comes into reality if we can parallelize similar tasks. For example, if you want to find contact information for 100 companies, this can all be done in parallel and reported back to a main agent, which processes the results and kicks off parallel subtasks again.
-
-
 ## Contributing
 
 We love contributions! Feel free to open issues for bugs or feature requests. To contribute to the docs, check out the `/docs` folder.
@@ -170,13 +151,7 @@ To learn more about the library, check out the [local setup 📕](https://docs.b
 
 ---
 
-## Swag
-
-Want to show off your Browser-use swag? Check out our [Merch store](https://browsermerch.com). Good contributors will receive swag for free 👀.
-
 ## Citation
-
-If you use Browser Use in your research or project, please cite:
 
 ```bibtex
 @software{browser_use2024,
@@ -187,14 +162,4 @@ If you use Browser Use in your research or project, please cite:
   url = {https://github.com/browser-use/browser-use}
 }
 ```
-
- <div align="center"> <img src="https://github.com/user-attachments/assets/06fa3078-8461-4560-b434-445510c1766f" width="400"/> 
- 
-[![Twitter Follow](https://img.shields.io/twitter/follow/Gregor?style=social)](https://x.com/gregpr07)
-[![Twitter Follow](https://img.shields.io/twitter/follow/Magnus?style=social)](https://x.com/mamagnus00)
- 
- </div>
-
-<div align="center">
-Made with ❤️ in Zurich and San Francisco
  </div>

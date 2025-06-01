@@ -72,6 +72,14 @@ logger = logging.getLogger(__name__)
 
 SKIP_LLM_API_KEY_VERIFICATION = os.environ.get('SKIP_LLM_API_KEY_VERIFICATION', 'false').lower()[0] in 'ty1'
 
+#TODO: Check if camoufox is installed first, if not, try to install it automatically
+print("")
+import subprocess
+try:
+	subprocess.run(["camoufox", "fetch"], check=True)
+except subprocess.CalledProcessError as e:
+	print(f"Please install camoufox by running 'camoufox fetch' in terminal, failed auto instal: {e.returncode}")
+	exit()
 
 def log_response(response: AgentOutput, registry=None) -> None:
 	"""Utility function to log the model's response."""
@@ -163,6 +171,7 @@ class Agent(Generic[Context]):
 		enable_memory: bool = True,
 		memory_config: MemoryConfig | None = None,
 		source: str | None = None,
+		proxy: dict | None = None,
 	):
 		if page_extraction_llm is None:
 			page_extraction_llm = llm
@@ -311,6 +320,7 @@ class Agent(Generic[Context]):
 				browser=browser,
 				browser_context=browser_context,
 				page=page,
+				proxy= proxy,
 			)
 
 		if self.sensitive_data:
@@ -1305,7 +1315,6 @@ class Agent(Generic[Context]):
 		self, max_steps: int = 100, on_step_start: AgentHookFunc | None = None, on_step_end: AgentHookFunc | None = None
 	) -> AgentHistoryList:
 		"""Execute the task with maximum number of steps"""
-
 		loop = asyncio.get_event_loop()
 		agent_run_error: str | None = None  # Initialize error tracking variable
 		self._force_exit_telemetry_logged = False  # ADDED: Flag for custom telemetry on force exit

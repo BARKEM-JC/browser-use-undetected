@@ -18,11 +18,6 @@ os.environ['PW_TEST_SCREENSHOT_NO_FONTS_READY'] = '1'  # https://github.com/micr
 import anyio
 import psutil
 
-#TODO: Remove these imports if not needed. - UNDETECTED
-#from patchright.async_api import Playwright as PatchrightPlaywright
-#from playwright.async_api import Browser as PlaywrightBrowser
-#from playwright.async_api import BrowserContext as PlaywrightBrowserContext
-
 from camoufox.async_api import AsyncCamoufox as StealthPlaywright
 from camoufox.async_api import BrowserContext as StealthBrowserContext
 from camoufox.async_api import Browser as StealthBrowser
@@ -45,14 +40,6 @@ from browser_use.utils import match_url_with_domain_pattern, merge_dicts, time_e
 IN_DOCKER = os.environ.get('IN_DOCKER', 'false').lower()[0] in 'ty1'
 
 logger = logging.getLogger('browser_use.browser.session')
-
-#TODO: Check if camoufox is installed first, if not, try to install it automatically
-import subprocess
-try:
-	subprocess.run(["camoufox", "fetch"], check=True)
-except subprocess.CalledProcessError as e:
-	print(f"Please install camoufox by running 'camoufox fetch' in terminal, failed auto instal: {e.returncode}")
-	exit()
 
 _GLOB_WARNING_SHOWN = False  # used inside _is_url_allowed to avoid spamming the logs with the same warning multiple times
 
@@ -188,6 +175,17 @@ class BrowserSession(BaseModel):
 		validation_alias=AliasChoices('chrome_pid'),  # old deprecated name = chrome_pid
 	)
 
+	proxy: dict | None = Field(
+		default=None,
+		description='Proxy URL to use for the browser, e.g. http://username:password@host:port',
+		exclude=True,
+	)
+	page: InstanceOf[Page] | None = Field(
+		default=None,
+		description='playwright Page object to use, if provided, will use its context as browser_context',
+		validation_alias=AliasChoices('playwright_page'),  # alias page= allows passing in a playwright Page object easily
+		exclude=True,
+	)
 	playwright: InstanceOf[StealthPlaywright] | None = Field(
 		default=None,
 		description='Playwright library object returned by: await (playwright or patchright).async_playwright().start()',
@@ -258,7 +256,7 @@ class BrowserSession(BaseModel):
 	# 	"""
 	# 	return getattr(self.browser_profile, key)
 
-	async def start(self, stealth=True) -> Self:
+	async def start(self) -> Self:
 		"""
 		Starts the browser session by either connecting to an existing browser or launching a new one.
 		Precedence order for launching/connecting:
@@ -286,22 +284,17 @@ class BrowserSession(BaseModel):
 
 				# launch/connect to the browser:
 				# setup playwright library client, Browser, and BrowserContext objects
-				if not stealth:
-					await self.setup_playwright() #TODO: Remove if not needed. - UNDETECTED
-					await self.setup_browser_via_passed_objects()
-					await self.setup_browser_via_browser_pid()
-					await self.setup_browser_via_wss_url()
-					await self.setup_browser_via_cdp_url()
-					await (
-						self.setup_new_browser_context()
-					)  # creates a new context in existing browser or launches a new persistent context
-					assert self.browser_context, f'Failed to connect to or create a new BrowserContext for browser={self.browser}'
+				await self.setup_playwright()
+				await self.setup_browser_via_passed_objects()
+				await self.setup_browser_via_browser_pid()
+				await self.setup_browser_via_wss_url()
+				await self.setup_browser_via_cdp_url()
+				await self.setup_new_browser_context()  # creates a new context in existing browser or launches a new persistent context
+				assert self.browser_context, f'Failed to connect to or create a new BrowserContext for browser={self.browser}'
 
-					# resize the existing pages and set up foreground tab detection
-					await self._setup_viewports()
-					await self._setup_current_page_change_listeners()
-				else:
-					self.browser = self.browser or await self.playwright.start()
+				# resize the existing pages and set up foreground tab detection
+				await self._setup_viewports()
+				await self._setup_current_page_change_listeners()
 			except Exception:
 				self.initialized = False
 				raise
@@ -358,8 +351,12 @@ class BrowserSession(BaseModel):
 		Override to customize the set up of the playwright or patchright library object
 		"""
 		# TODO: Remove if not needed. - UNDETECTED
-		self.playwright = StealthPlaywright()
-		self.playwright = self.playwright or (await StealthPlaywright().start())
+		self.playwright = StealthPlaywright(
+			geoip=True,
+			proxy=self.proxy,
+			humanize=True,
+		)
+		#self.playwright = self.playwright or (await StealthPlaywright().start())
 
 		#self.playwright = self.playwright or (await async_playwright().start())
 		# self.playwright = self.playwright or (await async_patchright().start())
@@ -461,6 +458,60 @@ class BrowserSession(BaseModel):
 
 	async def setup_new_browser_context(self) -> None:
 		"""Launch a new browser and browser_context"""
+		if not self.browser:
+			await self.playwright.start()
+			self.browser = self.playwright.browser
+			self.browser_context = await self.browser.new_context()
+		return
+
+		async def _update_browser_context():
+			if not self.browser_context:
+				logger.info(
+					f'🌎 Launching local browser '
+					f'driver={str(type(self.playwright).__module__).split(".")[0]} channel={self.browser_profile.channel.name.lower()} '
+					f'user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir) if self.browser_profile.user_data_dir else "<incognito>"}'
+				)
+				if not self.browser_profile.user_data_dir:
+					# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
+					# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
+					# self.browser = self.browser or await self.playwright.chromium.launch(
+					#	**self.browser_profile.kwargs_for_launch().model_dump()
+					# )
+					# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
+					self.browser_context = await self.browser.new_context(
+						**self.browser_profile.kwargs_for_new_context().model_dump()
+					)
+					self.browser = self.browser_context.browser
+				else:
+					# user data dir was provided, prepare it for use
+					self.browser_profile.prepare_user_data_dir()
+
+					# search for potentially conflicting local processes running on the same user_data_dir
+					for proc in psutil.process_iter(['pid', 'cmdline']):
+						if f'--user-data-dir={self.browser_profile.user_data_dir}' in (proc.info['cmdline'] or []):
+							logger.warning(
+								f'🚨 Found potentially conflicting browser process browser_pid={proc.info["pid"]} '
+								f'already running with the same user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir)}'
+							)
+							# self._fork_locked_user_data_dir()
+							break
+
+					# TODO: Check if this works, work around for below code - UNDETECTED
+					try:
+						context = self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
+						del context['env']
+						self.browser_context = await self.browser.new_context(
+							**context
+						)
+					except Exception as e:
+						print("BROWSER CONTEXT ERROR: " + str(e))
+						exit()
+			# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
+			# if a user_data_dir is provided, launch a persistent context with that user_data_dir
+			# self.browser_context = await self.playwright.chromium.launch_persistent_context(
+			#	**self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
+			# )
+
 		current_process = psutil.Process(os.getpid())
 		child_pids_before_launch = {child.pid for child in current_process.children(recursive=True)}
 
@@ -480,47 +531,12 @@ class BrowserSession(BaseModel):
 				)
 				logger.info(f'🌎 Created new empty browser_context in existing browser{storage_info}: {self.browser_context}')
 
+		if not self.browser:
+			await self.playwright.start()
+			self.browser = self.playwright.browser
+
 		# if we still have no browser_context by now, launch a new local one using launch_persistent_context()
-		if not self.browser_context:
-			logger.info(
-				f'🌎 Launching local browser '
-				f'driver={str(type(self.playwright).__module__).split(".")[0]} channel={self.browser_profile.channel.name.lower()} '
-				f'user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir) if self.browser_profile.user_data_dir else "<incognito>"}'
-			)
-			if not self.browser_profile.user_data_dir:
-				# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-				# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
-				#self.browser = self.browser or await self.playwright.chromium.launch(
-				#	**self.browser_profile.kwargs_for_launch().model_dump()
-				#)
-				# if no user_data_dir is provided, launch an incognito context with no persistent user_data_dir
-				self.browser_context = await self.browser.new_context(
-					**self.browser_profile.kwargs_for_new_context().model_dump()
-				)
-
-			else:
-				# user data dir was provided, prepare it for use
-				self.browser_profile.prepare_user_data_dir()
-
-				# search for potentially conflicting local processes running on the same user_data_dir
-				for proc in psutil.process_iter(['pid', 'cmdline']):
-					if f'--user-data-dir={self.browser_profile.user_data_dir}' in (proc.info['cmdline'] or []):
-						logger.warning(
-							f'🚨 Found potentially conflicting browser process browser_pid={proc.info["pid"]} '
-							f'already running with the same user_data_dir={_log_pretty_path(self.browser_profile.user_data_dir)}'
-						)
-						# self._fork_locked_user_data_dir()
-						break
-
-				# TODO: Check if this works, work around for below code - UNDETECTED
-				self.browser_context = await self.browser.new_context(
-					**self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
-				)
-				# TODO: Remove if not needed. This doesn't work with Camoufox to my knowledge - UNDETECTED
-				# if a user_data_dir is provided, launch a persistent context with that user_data_dir
-				#self.browser_context = await self.playwright.chromium.launch_persistent_context(
-				#	**self.browser_profile.kwargs_for_launch_persistent_context().model_dump()
-				#)
+		await _update_browser_context()
 
 		# Only restore browser from context if it's connected, otherwise keep it None to force new launch
 		browser_from_context = self.browser_context and self.browser_context.browser

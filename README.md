@@ -110,7 +110,7 @@ browser-use
 
 <br/><br/>
 
-Testing Bot Detection:
+Testing Bot Detection (takes abit to load):
 
 ![Bot Detection](https://github.com/BARKEM-JC/browser-use-undetected/raw/main/static/BotDetection.gif)
 

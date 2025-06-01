@@ -87,10 +87,21 @@ PROXY_PORT=
 For other settings, models, and more, check out the original [documentation 📕](https://docs.browser-use.com).
 
 
+### Test with UI
+(Have not tested)
+
+You can test browser-use using its Web UI or Desktop App.
+
+Or simply run the gradio example:
+``` bash
+uv pip install gradio
+python examples/gradio.py
+```
+
 ### Test with an interactive CLI
+(Have not tested)
 
 You can also use our `browser-use` interactive CLI (similar to `claude` code):
-
 ```bash
 pip install browser-use[cli]
 browser-use

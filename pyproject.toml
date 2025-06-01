@@ -2,7 +2,7 @@
 name = "browser-use-undetected"
 description = "Make websites accessible for AI agents. Now undetected!"
 authors = [{ name = "browser-use: Gregor Zunic" }, { name = "browser-use-undetected: Jayden Clarke" }]
-version = "0.2.5.2"
+version = "0.2.5.3"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 classifiers = [
@@ -32,7 +32,7 @@ dependencies = [
     "uuid7 ~= 0.1.0",
     "click ~= 8.2.1",
     "psutil ~= 7.0.0",
-    "camoufox ~= 0.4.11",
+    "camoufox[geoip] ~= 0.4.11",
     "posthog ~= 3.25.0"
 ]
 # pydantic: >2.11 introduces many pydantic deprecation warnings until langchain-core upgrades their pydantic support lets keep it on 2.10

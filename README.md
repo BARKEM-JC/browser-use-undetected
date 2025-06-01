@@ -4,6 +4,8 @@
 
 Forked from the official https://github.com/browser-use/browser-use If you give me a star please give them a star for their great work.
 
+To make it work initially i have disabled some things like Remote connection, Advanced context & browser connection. Will be disabled until i can confirm they work.
+
 🕵️‍♂️ Detection Results
 (Proxy is usually detected but not blocked, use a AI web unblocker proxy for more invisibility)
 | Site                                                           | Status | Notes                            |
@@ -91,6 +93,14 @@ PROXY_PORT=
 
 For other settings, models, and more, check out the original [documentation 📕](https://docs.browser-use.com).
 
+### Roadmap
+
+- [x] Anti-Detection Browser
+- [x] Proxy support
+- [ ] Fix disabled features (Remote connection, Advanced context & browser connection)
+- [ ] Anti-Captcha (Free local solving)
+- [ ] More proxy generation support
+- [ ] Anti-Captcha (Paid services)
 
 ### Test with UI
 (Have not tested)

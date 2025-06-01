@@ -107,6 +107,10 @@ For other settings, models, and more, check out the original [documentation 📕
 - [ ] More proxy generation providers support
 - [ ] Anti-Captcha (Paid services)
 
+### Versioning
+
+Should note the first 3 digits in the version is the browser-use version: e.g 0.2.5, the digits after: e.g x.x.x.3 specifies the current browser-use-undetected version
+
 ### Test with UI
 (Have not tested)
 
@@ -123,7 +127,7 @@ python examples/gradio.py
 
 You can also use our `browser-use` interactive CLI (similar to `claude` code):
 ```bash
-pip install browser-use[cli]
+pip install browser-use-undetected[cli]
 browser-use
 ```
 

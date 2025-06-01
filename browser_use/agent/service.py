@@ -72,15 +72,6 @@ logger = logging.getLogger(__name__)
 
 SKIP_LLM_API_KEY_VERIFICATION = os.environ.get('SKIP_LLM_API_KEY_VERIFICATION', 'false').lower()[0] in 'ty1'
 
-#TODO: Check if camoufox is installed first, if not, try to install it automatically
-print("")
-import subprocess
-try:
-	subprocess.run(["camoufox", "fetch"], check=True)
-except subprocess.CalledProcessError as e:
-	print(f"Please install camoufox by running 'camoufox fetch' in terminal, failed auto instal: {e.returncode}")
-	exit()
-
 def log_response(response: AgentOutput, registry=None) -> None:
 	"""Utility function to log the model's response."""
 

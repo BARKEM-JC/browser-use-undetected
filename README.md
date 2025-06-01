@@ -1,14 +1,11 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="./static/browser-use-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="./static/browser-use.png">
-  <img alt="Shows a black Browser Use Logo in light color mode and a white one in dark color mode." src="./static/browser-use.png"  width="full">
-</picture>
+<h1 align="center">Enable AI to control your browser 🤖 (Now undetected with proxy support!)</h1>
 
-<h1 align="center">Enable AI to control your browser 🤖 (Now undetected with proxy support)</h1>
+🌐 Browser-use-undetected is the easiest way to connect your AI agents with the browser without detection & proxy support.
 
-🌐 Browser-use is the easiest way to connect your AI agents with the browser.
+Forked from the official https://github.com/browser-use/browser-use If you give me a star please give them a star for their great work.
 
 🕵️‍♂️ Detection Results
+(Proxy is usually detected but not blocked, use a AI web unblocker proxy for more invisibility)
 | Site                                                           | Status | Notes                            |
 | -------------------------------------------------------------- | ------ | -------------------------------- |
 | [Google](https://www.google.com)                               | ✅ Pass | No bot detection triggered       |
@@ -20,16 +17,25 @@
 
 # Quick start
 
-Not available with pip yet, must git clone
+Install with:
 ```bash
-cd project
-git clone https://github.com/BARKEM-JC/browser-use-undetected.git
+pip install browser-use-undetected
+```
+
+Then once installed run this in the terminal:
+```bash
+camoufox fetch
 ```
 
 For memory functionality (requires Python<3.13 due to PyTorch compatibility):  
 
 ```bash
-pip install "browser-use[memory]"
+pip install "browser-use-undetected[memory]"
+```
+
+To clone the entire repo:
+```bash
+git clone https://github.com/BARKEM-JC/browser-use-undetected.git
 ```
 
 Spin up your agent:
@@ -110,7 +116,7 @@ browser-use
 
 <br/><br/>
 
-Testing Bot Detection (takes abit to load):
+Testing Bot Detection (takes abit to load, broken on pypi page, view using github link for now):
 
 ![Bot Detection](https://github.com/BARKEM-JC/browser-use-undetected/raw/main/static/BotDetection.gif)
 

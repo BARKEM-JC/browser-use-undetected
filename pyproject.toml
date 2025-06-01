@@ -2,7 +2,7 @@
 name = "browser-use-undetected"
 description = "Make websites accessible for AI agents. Now undetected!"
 authors = [{ name = "browser-use: Gregor Zunic" }, { name = "browser-use-undetected: Jayden Clarke" }]
-version = "0.2.5.1"
+version = "0.2.5.2"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 classifiers = [

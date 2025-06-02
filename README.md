@@ -1,206 +1,107 @@
-<h1 align="center">Enable AI to control your browser 🤖 (Now undetected with proxy support!)</h1>
+# Browser Use Stealth
 
-🌐 Browser-use-undetected is the easiest way to connect your AI agents with the browser without detection & proxy support.
+An undetected browser automation addon for [browser-use](https://github.com/browser-use/browser-use) that provides stealth capabilities using Camoufox (Firefox-based) to avoid detection by anti-bot systems.
 
-Forked from the official https://github.com/browser-use/browser-use If you give me a star please give them a star for their great work.
+## Features
 
-To make it work initially i have disabled some things like Remote connection, Advanced context & browser connection. Will be disabled until i can confirm they work.
+- **Stealth Browser Session**: Uses Camoufox for undetected browsing
+- **Proxy Support**: Built-in proxy configuration
+- **Captcha Solving**: Automatic captcha detection and solving
+- **Drop-in Replacement**: Easy integration with existing browser-use code
 
-🕵️‍♂️ Detection Results
-(Proxy is usually detected but not blocked, use a AI web unblocker proxy for more invisibility)
-| Site                                                           | Status | Notes                            |
-| -------------------------------------------------------------- | ------ | -------------------------------- |
-| [Google](https://www.google.com)                               | ✅ Pass | No bot detection triggered       |
-| [Brotector](https://kaliiiiiiiiii.github.io/brotector/)        | ✅ Pass | Click interaction successful     |
-| [CreepJS](https://abrahamjuliot.github.io/creepjs)             | ✅ Pass | No fingerprinting flags detected |
-| [Fingerprint](https://fingerprint.com/products/bot-detection/) | ✅ Pass | No bot behavior detected         |
-| [BrowserScan](https://www.browserscan.net/)                    | ✅ Pass | Report appears clean             |
-| [Incolumitus](https://bot.incolumitas.com/)                    | ❌ Fail | Proxy blocked                    |
-
-# Quick start
-
-Install with:
-```bash
-pip install browser-use-undetected
-```
-
-Then once installed run this in the terminal:
-```bash
-camoufox fetch
-```
-
-For memory functionality (requires Python<3.13 due to PyTorch compatibility):  
+## Installation
 
 ```bash
-pip install "browser-use-undetected[memory]"
+pip install browser-use[memory]
+pip install browser-use-stealth
 ```
 
-To clone the entire repo:
-```bash
-git clone https://github.com/BARKEM-JC/browser-use-undetected.git
-```
-
-Spin up your agent:
+## Quick Start
 
 ```python
 import asyncio
-import sys
-
-from dotenv import load_dotenv
-load_dotenv()
-from browser_use import Agent, utils
-from langchain_openai import ChatOpenAI
+from browser_use_stealth import StealthAgent
 
 async def main():
-    agent = Agent(
-        task="Compare prices of the latest iPhone and Samsung Galaxy in Australia",
-        llm=ChatOpenAI(model="gpt-4.1-nano-2025-04-14"),
-        enable_memory=False,
-        proxy=utils.PROXY(), # Set as arguments or in .env, The following arguments only work with oxylabs currently: country_code='au', city='brisbane', session_time=10 
-		#proxy={
-		#	'server': f'http://host:port',
-		#	'username': proxy_username,
-		#	'password': self.password
-		#}
-	)
-    await agent.run()
+    agent = StealthAgent(
+        task="Navigate to example.com and take a screenshot",
+        llm=your_llm_instance,  # Your LLM instance (OpenAI, Anthropic, etc.)
+        proxy={"server": "http://proxy:port", "username": "user", "password": "pass"},  # Optional
+        auto_solve_captchas=True,  # Optional
+        capsolver_api_key="your_capsolver_key"  # Optional
+    )
+    
+    result = await agent.run()
+    print(result)
 
 if __name__ == "__main__":
-	# Fixes issues with running from different contexts on windows
-    if sys.platform.startswith("win"):
-        loop = asyncio.ProactorEventLoop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(main())
-    else:
-        asyncio.run(main())
+    asyncio.run(main())
 ```
 
-Add your API keys for the provider you want to use to your `.env` file.
+## Advanced Usage
 
-```bash
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-AZURE_OPENAI_ENDPOINT=
-AZURE_OPENAI_KEY=
-GOOGLE_API_KEY=
-DEEPSEEK_API_KEY=
-GROK_API_KEY=
-NOVITA_API_KEY=
+### Using StealthBrowserSession directly
+
+```python
+from browser_use_stealth import StealthBrowserSession
+from browser_use.agent.service import Agent
+
+# Create a stealth browser session
+browser_session = StealthBrowserSession(
+    proxy={"server": "http://proxy:port", "username": "user", "password": "pass"},
+    auto_solve_captchas=True,
+    capsolver_api_key="your_capsolver_key"
+)
+
+# Use with regular Agent
+agent = Agent(
+    task="Your task here",
+    llm=your_llm_instance,
+    browser_session=browser_session
+)
 ```
 
-You can add your proxy settings globally to your `.env` file (or just specify in the Agent call).
-```bash
-PROXY_USERNAME=
-PROXY_PASSWORD=
-PROXY_HOST=
-PROXY_PORT=
+### Proxy Configuration
+
+```python
+from browser_use_stealth import PROXY
+
+# Use predefined proxy format
+proxy_config = PROXY(
+    host="proxy.example.com",
+    port="8080",
+    username="user", 
+    password="pass"
+)
+
+agent = StealthAgent(
+    task="Your task",
+    llm=your_llm_instance,
+    proxy=proxy_config
+)
 ```
 
-For other settings, models, and more, check out the original [documentation 📕](https://docs.browser-use.com).
+## Configuration Options
 
-### Roadmap
+- `proxy`: Proxy configuration dict or PROXY object
+- `auto_solve_captchas`: Enable automatic captcha solving (default: True)
+- `capsolver_api_key`: API key for CapSolver service
+- All other browser-use Agent parameters are supported
 
-- [x] Anti-Detection Browser
-- [x] Proxy support
-- [ ] Fix disabled features (Remote connection, Advanced context & browser connection)
-- [ ] Anti-Captcha (Free local solving)
-- [ ] More proxy generation providers support
-- [ ] Anti-Captcha (Paid services)
+## Dependencies
 
-### Versioning
+This addon requires:
+- `browser-use[memory]` - The base browser automation framework
+- `camoufox[geoip]` - Undetected Firefox-based browser
+- `psutil` - System process utilities
+- `pydantic` - Data validation
+- `playwright-recaptcha` - reCAPTCHA solving
+- `capsolver` - CAPTCHA solving service
 
-Should note the first 3 digits in the version is the browser-use version: e.g 0.2.5, the digits after: e.g x.x.x.3 specifies the current browser-use-undetected version
+## License
 
-### Test with UI
-(Have not tested)
-
-You can test browser-use using its Web UI or Desktop App.
-
-Or simply run the gradio example:
-``` bash
-uv pip install gradio
-python examples/gradio.py
-```
-
-### Test with an interactive CLI
-(Have not tested)
-
-You can also use our `browser-use` interactive CLI (similar to `claude` code):
-```bash
-pip install browser-use-undetected[cli]
-browser-use
-```
-
-# Demos
-
-<br/><br/>
-
-Testing Bot Detection (takes abit to load, broken on pypi page, view using github link for now):
-
-![Bot Detection](https://github.com/BARKEM-JC/browser-use-undetected/raw/main/static/BotDetection.gif)
-
-<br/><br/>
-
-[Task](https://github.com/browser-use/browser-use/blob/main/examples/use-cases/shopping.py): Add grocery items to cart, and checkout.
-
-[![AI Did My Groceries](https://github.com/user-attachments/assets/a0ffd23d-9a11-4368-8893-b092703abc14)](https://www.youtube.com/watch?v=L2Ya9PYNns8)
-
-<br/><br/>
-
-Prompt: Add my latest LinkedIn follower to my leads in Salesforce.
-
-![LinkedIn to Salesforce](https://github.com/user-attachments/assets/50d6e691-b66b-4077-a46c-49e9d4707e07)
-
-<br/><br/>
-
-[Prompt](https://github.com/browser-use/browser-use/blob/main/examples/use-cases/find_and_apply_to_jobs.py): Read my CV & find ML jobs, save them to a file, and then start applying for them in new tabs, if you need help, ask me.'
-
-https://github.com/user-attachments/assets/171fb4d6-0355-46f2-863e-edb04a828d04
-
-<br/><br/>
-
-[Prompt](https://github.com/browser-use/browser-use/blob/main/examples/browser/real_browser.py): Write a letter in Google Docs to my Papa, thanking him for everything, and save the document as a PDF.
-
-![Letter to Papa](https://github.com/user-attachments/assets/242ade3e-15bc-41c2-988f-cbc5415a66aa)
-
-<br/><br/>
-
-[Prompt](https://github.com/browser-use/browser-use/blob/main/examples/custom-functions/save_to_file_hugging_face.py): Look up models with a license of cc-by-sa-4.0 and sort by most likes on Hugging face, save top 5 to file.
-
-https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
-
-<br/><br/>
-
-## More examples
-
-For more examples see the [examples](examples) folder or join the official browser-use [Discord](https://link.browser-use.com/discord) and show off your project. You can also see [`awesome-prompts`](https://github.com/browser-use/awesome-prompts) repo for prompting inspiration.
-
-# Vision
-
-Tell your computer what to do, and it gets it done.
+MIT License - see LICENSE file for details.
 
 ## Contributing
 
-We love contributions! Feel free to open issues for bugs or feature requests. To contribute to the docs, check out the `/docs` folder.
-
-## Local Setup
-
-To learn more about the library, check out the [local setup 📕](https://docs.browser-use.com/development/local-setup).
-
-
-`main` is the primary development branch with frequent changes. For production use, install a stable [versioned release](https://github.com/browser-use/browser-use/releases) instead.
-
----
-
-## Citation
-
-```bibtex
-@software{browser_use2024,
-  author = {Müller, Magnus and Žunič, Gregor},
-  title = {Browser Use: Enable AI to control your browser},
-  year = {2024},
-  publisher = {GitHub},
-  url = {https://github.com/browser-use/browser-use}
-}
-```
- </div>
+This is an addon for browser-use. For the main framework, see [browser-use](https://github.com/browser-use/browser-use).

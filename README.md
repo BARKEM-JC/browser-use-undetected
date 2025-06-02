@@ -184,6 +184,11 @@ We encourage contributions!
 
 This is an addon for browser-use. For the main framework, see [browser-use](https://github.com/browser-use/browser-use).
 
+## Versioning
+
+The first 2 decimal points are the browser-use version e.g 0.2.5
+What comes after the last (third) decimal point is the current version of browser-use-undetected
+
 ## Citation
 
 ```bibtex

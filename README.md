@@ -51,6 +51,7 @@ async def main():
     agent = StealthAgent(
         task="Find a cheap Iphone <$500 using google",
 		llm=ChatOpenAI(model="gpt-4.1-nano-2025-04-14"),
+		#humanize=True, #Human movement, currently comboboxes/dropdowns do not work with this
         proxy=PROXY(), # Optional
 		#proxy={
 		#	"server": "http://proxy:port", 

@@ -51,6 +51,10 @@ class StealthBrowserSession(BrowserSession):
         default=None,
         description='Capsolver API key for fallback captcha solving',
     )
+    humanize: bool = Field(
+        default=False,
+        description='Whether to humanize interactions with the browser (e.g., mouse movements, typing)',
+    )
 
     async def start(self) -> Self:
         async with self._start_lock:
@@ -140,7 +144,7 @@ class StealthBrowserSession(BrowserSession):
         self.playwright = StealthPlaywright(
             geoip=True,
             proxy=self.proxy,
-            humanize=True,
+            humanize=self.humanize, # Comboboxes/dropdowns does not work with humanize option
             headless=self.browser_profile.headless,
         )
         return self.playwright

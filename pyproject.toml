@@ -4,7 +4,7 @@ description = "Undetected browser automation addon for browser-use with proxy su
 authors = [
     { name = "Jayden Clarke" }
 ]
-version = "0.2.5.5"
+version = "0.2.5.6"
 readme = "README.md"
 requires-python = ">=3.11,<4.0"
 classifiers = [
@@ -13,7 +13,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "browser-use[memory]>=0.2.5",
+    "browser-use>=0.2.5",
     "camoufox[geoip]>=0.4.11",
     "psutil>=7.0.0",
     "pydantic>=2.10.6",

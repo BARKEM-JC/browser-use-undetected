@@ -10,4 +10,4 @@ from .stealth_session import StealthBrowserSession
 from .stealth_utils import PROXY
 
 __all__ = ['StealthAgent', 'StealthBrowserSession', 'PROXY']
-__version__ = '1.0.0'
+__version__ = '0.5.2.11'

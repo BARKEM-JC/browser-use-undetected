@@ -272,7 +272,7 @@ class StealthBrowserSession(BrowserSession):
 
                 # Filter out Firefox-unsupported permissions for Camoufox
                 if 'permissions' in context_kwargs:
-                    firefox_supported_permissions = ['notifications'], #'geolocation', 'camera', 'microphone']
+                    firefox_supported_permissions = ['notifications'] #'geolocation', 'camera', 'microphone']
                     context_kwargs['permissions'] = [
                         perm for perm in context_kwargs['permissions']
                         if perm in firefox_supported_permissions

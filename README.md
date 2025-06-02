@@ -178,7 +178,7 @@ https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
 ## Dependencies
 
 This addon requires:
-- `browser-use[memory]` - The base browser automation framework
+- `browser-use` - The base browser automation framework
 - `camoufox[geoip]` - Undetected Firefox-based browser
 - `psutil` - System process utilities
 - `pydantic` - Data validation

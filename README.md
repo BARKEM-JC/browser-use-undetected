@@ -41,6 +41,8 @@ CAPSOLVER_API_KEY=
 
 ```python
 import asyncio
+from dotenv import load_dotenv
+load_dotenv()
 from langchain_openai import ChatOpenAI
 from browser_use_undetected import StealthAgent, PROXY
 

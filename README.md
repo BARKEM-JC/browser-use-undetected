@@ -15,7 +15,7 @@ You can find demos near the bottom of the page.
 
 Requires:
 ```bash
-python =>3.11<=3.13
+python 3.11>3.13
 ```
 
 In terminal:

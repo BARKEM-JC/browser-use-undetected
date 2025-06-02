@@ -13,7 +13,8 @@ You can find demos near the bottom of the page.
 
 ## Issues
 - [ ] Humanizer setting does not work with comboboxes/dropdowns
-= [ ] Captcha solving
+- [ ] Captcha solving not fully functional/tested
+- [ ] Unable to enter extra arguments in agent specifically for camoufox
 
 ## Installation
 

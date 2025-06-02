@@ -1,6 +1,6 @@
 # Browser Use Stealth
 
-An undetected browser automation wrapper/addon for [browser-use](https://github.com/browser-use/browser-use) that provides stealth capabilities using Camoufox (Firefox-based) & to avoid detection by anti-bot systems, with local ReCAPTCHA v2/v3 solving & cloud solving almost all other bot detection systems using CapSolver API
+An undetected browser automation wrapper/addon for [browser-use](https://github.com/browser-use/browser-use) that provides stealth capabilities using Camoufox (Firefox-based) & proxies to avoid detection by anti-bot systems, with local ReCAPTCHA v2/v3 solving & cloud solving almost all other bot detection systems using CapSolver API
 
 ## Features
 

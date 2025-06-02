@@ -120,7 +120,7 @@ agent = StealthAgent(
 
 Testing Bot Detection (takes abit to load, broken on pypi page, view using github link for now):
 
-![Bot Detection](https://github.com/BARKEM-JC/browser-use-undetected/raw/main/static/BotDetection.gif)
+![Bot Detection](https://github.com/BARKEM-JC/browser-use-undetected/blob/main/Demos/BotDetection.gif)
 
 <br/><br/>
 

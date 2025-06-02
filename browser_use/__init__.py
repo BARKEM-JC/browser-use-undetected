@@ -14,6 +14,7 @@ if sys.platform.startswith('win'):
 
 from browser_use.agent.prompts import SystemPrompt
 from browser_use.agent.service import Agent
+from browser_use.agent.stealth_service import StealthAgent
 from browser_use.agent.views import ActionModel, ActionResult, AgentHistoryList
 from browser_use.browser import Browser, BrowserConfig, BrowserContext, BrowserContextConfig, BrowserProfile, BrowserSession
 from browser_use.controller.service import Controller
@@ -21,6 +22,7 @@ from browser_use.dom.service import DomService
 
 __all__ = [
 	'Agent',
+	'StealthAgent',
 	'Browser',
 	'BrowserConfig',
 	'BrowserSession',

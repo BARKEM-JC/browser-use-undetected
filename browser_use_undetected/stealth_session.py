@@ -601,10 +601,6 @@ class StealthBrowserSession(BrowserSession):
         if compatible_permissions:
             try:
                 await self.browser_context.grant_permissions(compatible_permissions)
-                print(f'✅ Successfully granted Firefox-compatible permissions: {compatible_permissions}')
-                logger.debug(
-                    f'✅ Successfully granted Firefox-compatible permissions: {compatible_permissions}'
-                )
             except Exception as e:
                 logger.warning(
                     f'⚠️ Failed to grant Firefox-compatible permissions {compatible_permissions}: {type(e).__name__}: {e}'

@@ -1,4 +1,4 @@
-from browser_use.agent.service import Agent
+from browser_use import Agent
 from .stealth_session import StealthBrowserSession
 
 

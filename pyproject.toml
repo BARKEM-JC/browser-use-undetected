@@ -30,7 +30,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build]
 include = [
-    "browser_use_stealth/**/*.py",
+    "browser_use_undetected/**/*.py",
 ]
 
 [tool.ruff]

@@ -13,11 +13,11 @@ def test_imports():
         print("✅ Base browser-use imports successful")
         
         # Test importing stealth addon classes
-        from browser_use_stealth import StealthAgent, StealthBrowserSession, PROXY
+        from browser_use_undetected import StealthAgent, StealthBrowserSession, PROXY
         print("✅ Stealth addon imports successful")
         
         # Test importing stealth captcha module
-        from browser_use_stealth.stealth_captcha import CaptchaSolver
+        from browser_use_undetected.stealth_captcha import CaptchaSolver
         print("✅ Stealth captcha imports successful")
         
         # Test that classes are properly defined

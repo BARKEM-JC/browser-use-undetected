@@ -13,17 +13,20 @@ You can find demos near the bottom of the page.
 
 ## Installation
 
-In terminal:
+Requires:
+```bash
+python =>3.11<=3.13
+```
 
+In terminal:
 ```bash
 pip install browser-use-undetected
 camoufox fetch
 ```
 
 Add .env variables:
-
 ```bash
-# proxy settings (optional) - can set using Agent arguments or globally here
+# proxy settings (optional) - can set using Agent arguments or globally
 PROXY_USERNAME=
 PROXY_PASSWORD=
 PROXY_HOST=

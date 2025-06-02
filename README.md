@@ -15,6 +15,7 @@ You can find demos near the bottom of the page.
 - [ ] Humanizer setting does not work with comboboxes/dropdowns
 - [ ] Captcha solving not fully functional/tested
 - [ ] Unable to enter extra arguments in agent specifically for camoufox
+- [ ] Oxylabs is not a great provider, includes restricted targets for resedential proxies
 
 ## Installation
 

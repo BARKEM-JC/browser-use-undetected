@@ -482,3 +482,132 @@ class StealthBrowserSession(BrowserSession):
             logger.error(f"Error waiting for captcha resolution: {e}")
             
         return False
+
+    async def _setup_viewports(self) -> None:
+        """
+        Override viewport setup to handle Firefox-specific permission filtering.
+        This method is called after browser context creation and handles permission granting.
+        """
+        # Replicate parent viewport setup logic but with Firefox-compatible permission handling
+
+        # log the viewport settings to terminal
+        viewport = self.browser_profile.viewport
+        logger.debug(
+            '📐 Setting up viewport: '
+            + f'headless={self.browser_profile.headless} '
+            + (
+                f'window={self.browser_profile.window_size["width"]}x{self.browser_profile.window_size["height"]}px '
+                if self.browser_profile.window_size
+                else '(no window) '
+            )
+            + (
+                f'screen={self.browser_profile.screen["width"]}x{self.browser_profile.screen["height"]}px '
+                if self.browser_profile.screen
+                else ''
+            )
+            + (f'viewport={viewport["width"]}x{viewport["height"]}px ' if viewport else '(no viewport) ')
+            + f'device_scale_factor={self.browser_profile.device_scale_factor or 1.0} '
+            + f'is_mobile={self.browser_profile.is_mobile} '
+            + (f'color_scheme={self.browser_profile.color_scheme.value} ' if self.browser_profile.color_scheme else '')
+            + (f'locale={self.browser_profile.locale} ' if self.browser_profile.locale else '')
+            + (f'timezone_id={self.browser_profile.timezone_id} ' if self.browser_profile.timezone_id else '')
+            + (f'geolocation={self.browser_profile.geolocation} ' if self.browser_profile.geolocation else '')
+            + (f'permissions={",".join(self.browser_profile.permissions or ["<none>"])} ')
+        )
+
+        # Handle permissions with Firefox-specific filtering instead of calling parent
+        if self.browser_profile.permissions:
+            await self._grant_firefox_compatible_permissions()
+
+        # Continue with the rest of the parent setup logic
+        try:
+            if self.browser_profile.default_timeout:
+                await self.browser_context.set_default_timeout(self.browser_profile.default_timeout)
+            if self.browser_profile.default_navigation_timeout:
+                await self.browser_context.set_default_navigation_timeout(
+                    self.browser_profile.default_navigation_timeout)
+        except Exception as e:
+            logger.warning(
+                f'⚠️ Failed to set playwright timeout settings '
+                f'cdp_api={self.browser_profile.default_timeout} '
+                f'navigation={self.browser_profile.default_navigation_timeout}: {type(e).__name__}: {e}'
+            )
+        try:
+            if self.browser_profile.extra_http_headers:
+                await self.browser_context.set_extra_http_headers(self.browser_profile.extra_http_headers)
+        except Exception as e:
+            logger.warning(
+                f'⚠️ Failed to setup playwright extra_http_headers: {type(e).__name__}: {e}'
+            )  # dont print the secret header contents in the logs!
+
+        try:
+            if self.browser_profile.geolocation:
+                await self.browser_context.set_geolocation(self.browser_profile.geolocation)
+        except Exception as e:
+            logger.warning(
+                f'⚠️ Failed to update browser geolocation {self.browser_profile.geolocation}: {type(e).__name__}: {e}')
+
+        if self.browser_profile.storage_state:
+            await self.load_storage_state()
+
+        page = None
+
+        for page in self.browser_context.pages:
+            # resize any existing pages to match the configured viewport size
+            if viewport:
+                await page.set_viewport_size(viewport)
+
+        # if there are no pages yet, create one
+        if not page:
+            page = await self.browser_context.new_page()
+            if viewport:
+                await page.set_viewport_size(viewport)
+
+    async def _grant_firefox_compatible_permissions(self) -> None:
+        """
+        Grant only Firefox/Camoufox-compatible permissions to avoid errors.
+        """
+        if not self.browser_context or not self.browser_profile.permissions:
+            return
+
+        # Firefox/Camoufox supported permissions
+        firefox_supported_permissions = [
+            'notifications',
+            'geolocation',
+            'camera',
+            'microphone',
+            'persistent-storage',
+            'push',
+            'midi'
+        ]
+
+        # Filter out unsupported permissions
+        compatible_permissions = [
+            perm for perm in self.browser_profile.permissions
+            if perm in firefox_supported_permissions
+        ]
+
+        # Log filtered permissions for debugging
+        filtered_out = [
+            perm for perm in self.browser_profile.permissions
+            if perm not in firefox_supported_permissions
+        ]
+
+        if filtered_out:
+            logger.debug(
+                f'🦊 Filtered out Firefox-unsupported permissions: {filtered_out}'
+            )
+
+        if compatible_permissions:
+            try:
+                await self.browser_context.grant_permissions(compatible_permissions)
+                print(f'✅ Successfully granted Firefox-compatible permissions: {compatible_permissions}')
+                logger.debug(
+                    f'✅ Successfully granted Firefox-compatible permissions: {compatible_permissions}'
+                )
+            except Exception as e:
+                logger.warning(
+                    f'⚠️ Failed to grant Firefox-compatible permissions {compatible_permissions}: {type(e).__name__}: {e}'
+                )
+        else:
+            logger.debug('🦊 No Firefox-compatible permissions to grant')

@@ -33,7 +33,12 @@ dependencies = [
     "click ~= 8.2.1",
     "psutil ~= 7.0.0",
     "camoufox[geoip] ~= 0.4.11",
-    "posthog ~= 3.25.0"
+    "posthog ~= 3.25.0",
+    "playwright-recaptcha ~= 0.5.0",
+    "capsolver ~= 1.0.0",
+    "pydub ~= 0.25.1",
+    "SpeechRecognition ~= 3.10.0",
+    "tenacity ~= 8.2.0"
 ]
 # pydantic: >2.11 introduces many pydantic deprecation warnings until langchain-core upgrades their pydantic support lets keep it on 2.10
 # google-api-core: only used for Google LLM APIs

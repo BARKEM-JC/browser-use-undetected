@@ -1,15 +1,18 @@
+import asyncio
 import os
-from typing import Self
+from typing import Self, Optional
 
 import psutil
 from pydantic import Field, InstanceOf, AliasChoices
 
-from browser_use import BrowserSession, BrowserProfile
+from browser_use.browser.session import BrowserSession
+from browser_use.browser.profile import BrowserProfile
 from camoufox.async_api import AsyncCamoufox as StealthPlaywright
 from camoufox.async_api import BrowserContext as StealthBrowserContext
 from camoufox.async_api import Browser as StealthBrowser
 
 from browser_use.browser.session import logger, _log_pretty_path
+from browser_use.captcha import CaptchaSolver
 
 
 class StealthBrowserSession(BrowserSession):
@@ -35,8 +38,19 @@ class StealthBrowserSession(BrowserSession):
         validation_alias=AliasChoices('playwright_browser_context', 'context'),
         exclude=True,
     )
-    del super().cdp_url
-    #del super().browser_pid
+    captcha_solver: Optional[CaptchaSolver] = Field(
+        default=None,
+        description='Captcha solver instance for automatic captcha detection and solving',
+        exclude=True,
+    )
+    auto_solve_captchas: bool = Field(
+        default=True,
+        description='Whether to automatically detect and solve captchas',
+    )
+    capsolver_api_key: Optional[str] = Field(
+        default=None,
+        description='Capsolver API key for fallback captcha solving',
+    )
 
     async def start(self) -> Self:
         async with self._start_lock:
@@ -63,6 +77,10 @@ class StealthBrowserSession(BrowserSession):
                 # resize the existing pages and set up foreground tab detection
                 await self._setup_viewports()
                 await self._setup_current_page_change_listeners()
+                
+                # Initialize captcha solver if auto-solving is enabled
+                if self.auto_solve_captchas:
+                    await self._setup_captcha_solver()
             except Exception:
                 self.initialized = False
                 raise
@@ -352,3 +370,115 @@ class StealthBrowserSession(BrowserSession):
 
         # Load cookies from file if specified
         await self.load_cookies_from_file()
+
+    async def _setup_captcha_solver(self) -> None:
+        """Initialize the captcha solver for the current page."""
+        try:
+            if self.agent_current_page and not self.agent_current_page.is_closed():
+                # Use instance capsolver_api_key or fall back to environment variable
+                api_key = self.capsolver_api_key or os.getenv('CAPSOLVER_API_KEY')
+                self.captcha_solver = CaptchaSolver(
+                    page=self.agent_current_page,
+                    capsolver_api_key=api_key
+                )
+                logger.info("Captcha solver initialized for automatic captcha detection and solving")
+            else:
+                logger.debug("No current page available for captcha solver initialization")
+        except Exception as e:
+            logger.error(f"Failed to initialize captcha solver: {e}")
+
+    async def navigate(self, url: str) -> None:
+        """Navigate to URL with automatic captcha detection and solving."""
+        # Call parent navigate method
+        await super().navigate(url)
+        
+        # Auto-solve captchas if enabled
+        if self.auto_solve_captchas and self.agent_current_page:
+            await self._handle_page_captchas()
+
+    async def refresh(self) -> None:
+        """Refresh page with automatic captcha detection and solving."""
+        # Call parent refresh method
+        await super().refresh()
+        
+        # Auto-solve captchas if enabled
+        if self.auto_solve_captchas and self.agent_current_page:
+            await self._handle_page_captchas()
+
+    async def _handle_page_captchas(self) -> None:
+        """Handle captchas on the current page."""
+        try:
+            if not self.captcha_solver or not self.agent_current_page:
+                # Reinitialize captcha solver if needed
+                await self._setup_captcha_solver()
+                
+            if self.captcha_solver and self.agent_current_page:
+                # Update captcha solver page reference
+                self.captcha_solver.page = self.agent_current_page
+                
+                # Wait a moment for page to load
+                await asyncio.sleep(1)
+                
+                # Detect and solve captchas
+                solved = await self.captcha_solver.detect_and_solve_captchas(timeout=30)
+                if solved:
+                    logger.info("Successfully solved captchas on page")
+                    # Wait a bit more for any redirects after solving
+                    await asyncio.sleep(2)
+                    
+        except Exception as e:
+            logger.error(f"Error handling page captchas: {e}")
+
+    async def solve_captchas_manually(self, timeout: float = 30) -> bool:
+        """
+        Manually trigger captcha solving on the current page.
+        
+        Args:
+            timeout: Maximum time to wait for captcha solving
+            
+        Returns:
+            bool: True if captchas were solved, False otherwise
+        """
+        try:
+            if not self.agent_current_page:
+                logger.warning("No current page available for captcha solving")
+                return False
+                
+            if not self.captcha_solver:
+                await self._setup_captcha_solver()
+                
+            if self.captcha_solver:
+                self.captcha_solver.page = self.agent_current_page
+                return await self.captcha_solver.detect_and_solve_captchas(timeout=timeout)
+                
+        except Exception as e:
+            logger.error(f"Error in manual captcha solving: {e}")
+            
+        return False
+
+    async def wait_for_captcha_resolution(self, timeout: float = 60) -> bool:
+        """
+        Wait for any captcha or bot detection to be resolved.
+        
+        Args:
+            timeout: Maximum time to wait
+            
+        Returns:
+            bool: True if page is clear of captchas, False if timeout
+        """
+        try:
+            if not self.agent_current_page:
+                logger.warning("No current page available for captcha monitoring")
+                return False
+                
+            if not self.captcha_solver:
+                await self._setup_captcha_solver()
+                
+            if self.captcha_solver:
+                self.captcha_solver.page = self.agent_current_page
+                return await self.captcha_solver.wait_for_captcha_resolution(timeout=timeout)
+                
+        except Exception as e:
+            logger.error(f"Error waiting for captcha resolution: {e}")
+            
+        return False

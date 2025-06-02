@@ -3,12 +3,14 @@ from browser_use.browser import StealthBrowserSession
 
 
 class StealthAgent(Agent):
-    def __init__(self, proxy=None, *args, **kwargs):
+    def __init__(self, proxy=None, auto_solve_captchas=True, capsolver_api_key=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.browser_session = StealthBrowserSession(
             browser_profile=kwargs['browser_profile'],
             browser=kwargs['browser'],
             browser_context=kwargs['browser_context'],
             proxy=proxy,
+            auto_solve_captchas=auto_solve_captchas,
+            capsolver_api_key=capsolver_api_key,
         )
 

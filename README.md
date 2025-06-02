@@ -1,135 +1,118 @@
-<h1 align="center">Enable AI to control your browser 🤖 (Now undetected with proxy support!)</h1>
+# Browser Use Stealth
 
-🌐 Browser-use-undetected is the easiest way to connect your AI agents with the browser without detection & proxy support.
+An undetected browser automation addon for [browser-use](https://github.com/browser-use/browser-use) that provides stealth capabilities using Camoufox (Firefox-based) to avoid detection by anti-bot systems.
 
-Forked from the official https://github.com/browser-use/browser-use If you give me a star please give them a star for their great work.
+## Features
 
-To make it work initially i have disabled some things like Remote connection, Advanced context & browser connection. Will be disabled until i can confirm they work.
+- **Stealth Browser Session**: Uses Camoufox for undetected browsing
+- **Proxy Support**: Built-in proxy configuration
+- **Captcha Solving**: Automatic captcha detection and solving
+- **Drop-in Replacement**: Easy integration with existing browser-use code
 
-🕵️‍♂️ Detection Results
-(Proxy is usually detected but not blocked, use a AI web unblocker proxy for more invisibility)
-| Site                                                           | Status | Notes                            |
-| -------------------------------------------------------------- | ------ | -------------------------------- |
-| [Google](https://www.google.com)                               | ✅ Pass | No bot detection triggered       |
-| [Brotector](https://kaliiiiiiiiii.github.io/brotector/)        | ✅ Pass | Click interaction successful     |
-| [CreepJS](https://abrahamjuliot.github.io/creepjs)             | ✅ Pass | No fingerprinting flags detected |
-| [Fingerprint](https://fingerprint.com/products/bot-detection/) | ✅ Pass | No bot behavior detected         |
-| [BrowserScan](https://www.browserscan.net/)                    | ✅ Pass | Report appears clean             |
-| [Incolumitus](https://bot.incolumitas.com/)                    | ❌ Fail | Proxy blocked                    |
+You can find demos near the bottom of the page.
 
-# Quick start
+## Installation
 
-Install with:
+In terminal:
+
 ```bash
 pip install browser-use-undetected
-```
-
-Then once installed run this in the terminal:
-```bash
 camoufox fetch
 ```
 
-For memory functionality (requires Python<3.13 due to PyTorch compatibility):  
+Add .env variables:
 
 ```bash
-pip install "browser-use-undetected[memory]"
-```
-
-To clone the entire repo:
-```bash
-git clone https://github.com/BARKEM-JC/browser-use-undetected.git
-```
-
-Spin up your agent:
-
-```python
-import asyncio
-import sys
-
-from dotenv import load_dotenv
-load_dotenv()
-from browser_use import Agent, utils
-from langchain_openai import ChatOpenAI
-
-async def main():
-    agent = Agent(
-        task="Compare prices of the latest iPhone and Samsung Galaxy in Australia",
-        llm=ChatOpenAI(model="gpt-4.1-nano-2025-04-14"),
-        enable_memory=False,
-        proxy=utils.PROXY(), # Set as arguments or in .env, The following arguments only work with oxylabs currently: country_code='au', city='brisbane', session_time=10 
-		#proxy={
-		#	'server': f'http://host:port',
-		#	'username': proxy_username,
-		#	'password': self.password
-		#}
-	)
-    await agent.run()
-
-if __name__ == "__main__":
-	# Fixes issues with running from different contexts on windows
-    if sys.platform.startswith("win"):
-        loop = asyncio.ProactorEventLoop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(main())
-    else:
-        asyncio.run(main())
-```
-
-Add your API keys for the provider you want to use to your `.env` file.
-
-```bash
-OPENAI_API_KEY=
-ANTHROPIC_API_KEY=
-AZURE_OPENAI_ENDPOINT=
-AZURE_OPENAI_KEY=
-GOOGLE_API_KEY=
-DEEPSEEK_API_KEY=
-GROK_API_KEY=
-NOVITA_API_KEY=
-```
-
-You can add your proxy settings globally to your `.env` file (or just specify in the Agent call).
-```bash
+# proxy settings (optional) - can set using Agent arguments or globally here
 PROXY_USERNAME=
 PROXY_PASSWORD=
 PROXY_HOST=
 PROXY_PORT=
+
+# Capsolver API Key (optional) - for fallback captcha solving
+# Get your API key from https://capsolver.com/
+CAPSOLVER_API_KEY=
 ```
 
-For other settings, models, and more, check out the original [documentation 📕](https://docs.browser-use.com).
+## Quick Start
 
-### Roadmap
+```python
+import asyncio
+from langchain_openai import ChatOpenAI
+from browser_use_undetected import StealthAgent, PROXY
 
-- [x] Anti-Detection Browser
-- [x] Proxy support
-- [ ] Fix disabled features (Remote connection, Advanced context & browser connection)
-- [ ] Anti-Captcha (Free local solving)
-- [ ] More proxy generation providers support
-- [ ] Anti-Captcha (Paid services)
 
-### Versioning
+async def main():
+    agent = StealthAgent(
+        task="Find a cheap Iphone <$500 using google",
+		llm=ChatOpenAI(model="gpt-4.1-nano-2025-04-14"),
+        proxy=PROXY(), # Optional
+		#proxy={
+		#	"server": "http://proxy:port", 
+		#	"username": "user", 
+		#	"password": "pass"
+		#},
+        auto_solve_captchas=True,  # Optional
+        capsolver_api_key="your_capsolver_key"  # Optional
+    )
 
-Should note the first 3 digits in the version is the browser-use version: e.g 0.2.5, the digits after: e.g x.x.x.3 specifies the current browser-use-undetected version
+    result = await agent.run()
+    print(result)
 
-### Test with UI
-(Have not tested)
 
-You can test browser-use using its Web UI or Desktop App.
-
-Or simply run the gradio example:
-``` bash
-uv pip install gradio
-python examples/gradio.py
+if __name__ == "__main__":
+    asyncio.run(main())
 ```
 
-### Test with an interactive CLI
-(Have not tested)
+## Advanced Usage
 
-You can also use our `browser-use` interactive CLI (similar to `claude` code):
-```bash
-pip install browser-use-undetected[cli]
-browser-use
+### Using StealthBrowserSession directly
+
+```python
+from browser_use_undetected import StealthBrowserSession
+from browser_use.agent.service import Agent
+
+# Create a stealth browser session
+browser_session = StealthBrowserSession(
+    proxy={"server": "http://proxy:port", "username": "user", "password": "pass"},
+    auto_solve_captchas=True,
+    capsolver_api_key="your_capsolver_key"
+)
+
+# Use with regular Agent
+agent = Agent(
+    task="Your task here",
+    llm=your_llm_instance,
+    browser_session=browser_session
+)
 ```
+
+### Proxy Configuration
+
+```python
+from browser_use_undetected import PROXY
+
+# Use predefined proxy format
+proxy_config = PROXY(
+    host="proxy.example.com",
+    port="8080",
+    username="user",
+    password="pass"
+)
+
+agent = StealthAgent(
+    task="Your task",
+    llm=your_llm_instance,
+    proxy=proxy_config
+)
+```
+
+## Configuration Options
+
+- `proxy`: Proxy configuration dict or PROXY object
+- `auto_solve_captchas`: Enable automatic captcha solving (default: True)
+- `capsolver_api_key`: API key for CapSolver service
+- All other browser-use Agent parameters are supported
 
 # Demos
 
@@ -171,26 +154,35 @@ https://github.com/user-attachments/assets/de73ee39-432c-4b97-b4e8-939fd7f323b3
 
 <br/><br/>
 
-## More examples
+### Roadmap
 
-For more examples see the [examples](examples) folder or join the official browser-use [Discord](https://link.browser-use.com/discord) and show off your project. You can also see [`awesome-prompts`](https://github.com/browser-use/awesome-prompts) repo for prompting inspiration.
+- [x] Anti-Detection Browser
+- [x] Proxy support
+- [x] Fix disabled features (Remote connection, Advanced context & browser connection)
+- [x] Anti-Captcha (Free local solving)
+- [ ] More proxy generation providers support
+- [x] Anti-Captcha (Paid services)
+- [ ] Extensive testing of Anti-Captcha
 
-# Vision
+## Dependencies
 
-Tell your computer what to do, and it gets it done.
+This addon requires:
+- `browser-use[memory]` - The base browser automation framework
+- `camoufox[geoip]` - Undetected Firefox-based browser
+- `psutil` - System process utilities
+- `pydantic` - Data validation
+- `playwright-recaptcha` - Local reCAPTCHA solving
+- `capsolver` - Cloud CAPTCHA solving service
+
+## License
+
+MIT License - see LICENSE file for details.
 
 ## Contributing
 
-We love contributions! Feel free to open issues for bugs or feature requests. To contribute to the docs, check out the `/docs` folder.
+We encourage contributions!
 
-## Local Setup
-
-To learn more about the library, check out the [local setup 📕](https://docs.browser-use.com/development/local-setup).
-
-
-`main` is the primary development branch with frequent changes. For production use, install a stable [versioned release](https://github.com/browser-use/browser-use/releases) instead.
-
----
+This is an addon for browser-use. For the main framework, see [browser-use](https://github.com/browser-use/browser-use).
 
 ## Citation
 
@@ -203,4 +195,3 @@ To learn more about the library, check out the [local setup 📕](https://docs.b
   url = {https://github.com/browser-use/browser-use}
 }
 ```
- </div>
